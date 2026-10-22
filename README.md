@@ -4,6 +4,8 @@ Pilotage du rotor d'azimut **Yaesu G-2800DXC** depuis un PC, avec un Arduino Nan
 
 Article de présentation : [hamanalyst.org — *titre de l'article à compléter*](https://hamanalyst.org/) <!-- TODO : lien définitif -->
 
+![Interface rotor_control.py : carte, cap vers la cible, panneaux de commande](docs/appli-rotor.png)
+
 > ⚠️ Montage amateur, testé sur un seul rotor (G-2800DXC). Lisez la section **Sécurité** avant le premier essai.
 
 ## Contenu du dépôt
@@ -12,7 +14,7 @@ Article de présentation : [hamanalyst.org — *titre de l'article à compléter
 |---|---|
 | `firmware/rotor_k3ng_ON5AM/rotor_k3ng_ON5AM.ino` | Firmware du Nano (GS-232A, sécurités, étalonnage) |
 | `scripts/rotor_control.py` | Interface graphique (Tkinter) |
-| `scripts/world_map.png` | Fond de carte de l'interface (projection de Miller) |
+| `scripts/world_map.png` | Fond de carte de l'interface (projection de Miller, d'après Natural Earth) |
 | `scripts/test_comm.py` | Test de communication (bannière + 15 lectures d'azimut) |
 | `scripts/calib_read.py` | Relevé d'un point d'étalonnage (20 lectures brutes de l'ADC) |
 | `scripts/relay_test.py` | Test des relais |
@@ -22,6 +24,8 @@ Article de présentation : [hamanalyst.org — *titre de l'article à compléter
 | `docs/schema_rotor_g2800.svg` / `.png` | Schéma électrique |
 | `docs/plan_plaque_rotor_g2800.svg` | Plan de pose sur plaque à pastilles |
 | `docs/guide_plaque_rotor_g2800.md` | Guide de montage de la plaque, liste des fils, contrôles |
+| `tools/gen_world_map.py` | Régénère `world_map.png` depuis les terres Natural Earth |
+| `docs/appli-rotor.png` | Capture de l'interface |
 | `rotor_config.example.ini` | Modèle de configuration locale |
 
 ## Matériel
@@ -135,7 +139,7 @@ Dans l'interface : **GO** envoie `M`, les boutons **◄ CCW / ■ / CW ►** env
 
 La conversion ADC → degrés est une table de 6 points écrite dans le firmware (`CAL_ADC` / `CAL_DEG`), avec interpolation linéaire entre les points.
 
-1. Placer le rotor **avec les boutons de la face avant** sur chaque repère de l'aiguille : **butée 0°, 90°, 180°, 270°, 360°, puis 30 du recouvrement (= 390°)**.
+1. Placer le rotor **avec les boutons de la face avant** sur chaque repère de l'aiguille : **butée 0°, 90°, 180°, 270°, 360°, puis la graduation « 30 » de la zone de recouvrement (= 390°)**.
 2. À chaque point, l'aiguille arrêtée : `python3 scripts/calib_read.py "180 (aiguille 180)"` (20 lectures de `\R`, moyenne enregistrée dans `scripts/calib_releves.txt`).
 3. Reporter les moyennes arrondies dans le firmware, par exemple :
    ```c
@@ -160,6 +164,10 @@ L'étalonnage dépend du 5 V du Nano. **À refaire après tout changement** de N
   - **timeout de 300 s** sans nouvelle commande de mouvement → arrêt. Une course complète 0 → 360° dure environ 150 à 180 s en commande externe ;
   - aucun relais collé au démarrage du Nano.
 - Les **butées mécaniques** du rotor restent la dernière protection : la limite logicielle dépend d'une lecture d'azimut correcte. Un boîtier éteint ou un fil d'azimut débranché donne une lecture de 0°.
+
+## Crédits
+
+Fond de carte : *Made with Natural Earth. Free vector and raster map data @ [naturalearthdata.com](https://www.naturalearthdata.com/)* (domaine public). Terres 1:50 M, projection de Miller, générées par `tools/gen_world_map.py`.
 
 ## Licence
 
