@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 820" width="940" height="820" font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <defs>
+    <g id="chan" fill="none" stroke="#222" stroke-width="2">
+      <!-- bobine + diode de roue libre -->
+      <line x1="0" y1="90" x2="0" y2="130"/>
+      <rect x="-18" y="130" width="36" height="70" fill="#fff"/>
+      <line x1="0" y1="200" x2="0" y2="270"/>
+      <line x1="60" y1="90" x2="60" y2="172"/>
+      <polygon points="50,195 70,195 60,175" fill="#222"/>
+      <line x1="50" y1="172" x2="70" y2="172"/>
+      <line x1="60" y1="195" x2="60" y2="230"/>
+      <line x1="0" y1="230" x2="60" y2="230"/>
+      <circle cx="0" cy="90" r="3.5" fill="#222"/>
+      <circle cx="60" cy="90" r="3.5" fill="#222"/>
+      <circle cx="0" cy="230" r="3.5" fill="#222"/>
+      <text x="75" y="188" font-size="12" fill="#222" stroke="none">1N4007</text>
+      <text x="-26" y="168" font-size="12" fill="#222" stroke="none" text-anchor="end">bobine</text>
+      <!-- 2N2222 -->
+      <line x1="-14" y1="285" x2="-14" y2="335" stroke-width="3.5"/>
+      <line x1="-14" y1="300" x2="0" y2="285"/>
+      <line x1="0" y1="285" x2="0" y2="270"/>
+      <line x1="-14" y1="320" x2="0" y2="335"/>
+      <polygon points="-0.7,334.25 -2,327 -7.8,332.5" fill="#222" stroke="none"/>
+      <line x1="0" y1="335" x2="0" y2="400"/>
+      <text x="8" y="282" font-size="12" fill="#222" stroke="none">C</text>
+      <text x="8" y="352" font-size="12" fill="#222" stroke="none">E</text>
+      <text x="-30" y="304" font-size="12" fill="#222" stroke="none">B</text>
+      <!-- base : 1k série + 10k vers la masse -->
+      <line x1="-14" y1="310" x2="-110" y2="310"/>
+      <rect x="-150" y="302" width="40" height="16" fill="#fff"/>
+      <line x1="-200" y1="310" x2="-150" y2="310"/>
+      <circle cx="-60" cy="310" r="3.5" fill="#222"/>
+      <line x1="-60" y1="310" x2="-60" y2="340"/>
+      <rect x="-66" y="340" width="12" height="34" fill="#fff"/>
+      <line x1="-60" y1="374" x2="-60" y2="400"/>
+      <circle cx="-60" cy="400" r="3.5" fill="#222"/>
+      <circle cx="0" cy="400" r="3.5" fill="#222"/>
+      <text x="-130" y="294" font-size="12" fill="#222" stroke="none" text-anchor="middle">1 kΩ</text>
+      <text x="-48" y="362" font-size="12" fill="#222" stroke="none">10 kΩ</text>
+      <circle cx="-200" cy="310" r="5" fill="#fff"/>
+      <!-- contacts du relais : COM sur la masse, NO vers le fil du rotor -->
+      <line x1="130" y1="400" x2="130" y2="455"/>
+      <circle cx="130" cy="400" r="3.5" fill="#222"/>
+      <circle cx="130" cy="458" r="4" fill="#fff"/>
+      <circle cx="130" cy="520" r="4" fill="#fff"/>
+      <line x1="130" y1="458" x2="114" y2="508"/>
+      <line x1="130" y1="524" x2="130" y2="562"/>
+      <text x="142" y="456" font-size="12" fill="#222" stroke="none">COM</text>
+      <text x="142" y="524" font-size="12" fill="#222" stroke="none">NO</text>
+    </g>
+  </defs>
+
+  <rect width="940" height="820" fill="#fff"/>
+  <text x="30" y="32" font-size="18" font-weight="bold" fill="#111">Contrôleur rotor Yaesu G-2800 (ON5AM) — alim 5 V séparée et masse en étoile</text>
+
+  <!-- rail +5 V externe -->
+  <line x1="60" y1="90" x2="780" y2="90" stroke="#c0392b" stroke-width="2.5"/>
+  <circle cx="60" cy="90" r="5" fill="#c0392b"/>
+  <text x="30" y="72" fill="#c0392b" font-weight="bold">+ 5 V ext. (1 A)</text>
+  <text x="400" y="72" fill="#c0392b" font-size="12" text-anchor="middle">jamais relié au 5 V du Nano</text>
+
+  <!-- rail masse puissance = fil B -->
+  <line x1="60" y1="400" x2="900" y2="400" stroke="#222" stroke-width="2.5"/>
+  <circle cx="60" cy="400" r="5" fill="#222"/>
+  <text x="30" y="384" font-weight="bold" fill="#222">− 5 V ext.</text>
+
+  <!-- condensateurs de réservoir -->
+  <g stroke="#222" stroke-width="2" fill="none">
+    <circle cx="110" cy="90" r="3.5" fill="#c0392b" stroke="none"/>
+    <line x1="110" y1="90" x2="110" y2="228"/>
+    <line x1="95" y1="228" x2="125" y2="228"/>
+    <line x1="95" y1="236" x2="125" y2="236"/>
+    <line x1="110" y1="236" x2="110" y2="400"/>
+    <circle cx="110" cy="400" r="3.5" fill="#222" stroke="none"/>
+  </g>
+  <text x="130" y="236" font-size="12" fill="#222">470 µF + 100 nF</text>
+  <text x="130" y="252" font-size="12" fill="#222">(au plus près des bobines)</text>
+
+  <!-- voie 1 : RL1 / D2 / CW -->
+  <use href="#chan" x="380" y="0"/>
+  <text x="180" y="334" text-anchor="middle" font-weight="bold" fill="#111">D2 (Nano)</text>
+  <text x="380" y="118" text-anchor="middle" font-weight="bold" fill="#111" font-size="14">RL1</text>
+  <text x="510" y="600" text-anchor="middle" font-size="12" fill="#222">Contacts RL1</text>
+
+  <!-- voie 2 : RL2 / D3 / CCW -->
+  <use href="#chan" x="700" y="0"/>
+  <text x="500" y="334" text-anchor="middle" font-weight="bold" fill="#111">D3 (Nano)</text>
+  <text x="700" y="118" text-anchor="middle" font-weight="bold" fill="#111" font-size="14">RL2</text>
+  <text x="830" y="600" text-anchor="middle" font-size="12" fill="#222">Contacts RL2</text>
+
+  <!-- bornes vers le rotor -->
+  <circle cx="510" cy="572" r="8" fill="#c0392b" stroke="#c0392b"/>
+  <text x="510" y="618" text-anchor="middle" font-weight="bold" fill="#c0392b">fil rouge</text>
+  <text x="510" y="634" text-anchor="middle" fill="#c0392b">CW (R) : azimut ↑</text>
+  <circle cx="830" cy="572" r="8" fill="#222" stroke="#222"/>
+  <text x="830" y="618" text-anchor="middle" font-weight="bold" fill="#111">fil noir</text>
+  <text x="830" y="634" text-anchor="middle" fill="#111">CCW (L) : azimut ↓</text>
+
+  <!-- brun = masse du rotor -->
+  <circle cx="900" cy="400" r="8" fill="#8b5a2b" stroke="#8b5a2b"/>
+  <text x="915" y="372" text-anchor="end" font-weight="bold" fill="#8b5a2b">fil brun</text>
+  <text x="915" y="388" text-anchor="end" fill="#8b5a2b">(masse rotor)</text>
+
+  <!-- fil B : retour puissance -->
+  <line x1="60" y1="400" x2="60" y2="720" stroke="#222" stroke-width="2.5"/>
+  <text x="72" y="500" font-weight="bold" fill="#222">fil B</text>
+  <text x="72" y="516" font-size="12" fill="#222">retour puissance :</text>
+  <text x="72" y="531" font-size="12" fill="#222">émetteurs 2N2222,</text>
+  <text x="72" y="546" font-size="12" fill="#222">− alim, COM relais</text>
+
+  <!-- chaîne azimut : orange -> 10k -> A0 + 100 nF, retour par fil A -->
+  <g stroke="#e67e22" stroke-width="2.5" fill="none">
+    <circle cx="300" cy="670" r="8" fill="#e67e22"/>
+    <line x1="308" y1="670" x2="360" y2="670"/>
+    <rect x="360" y="662" width="50" height="16" fill="#fff" stroke="#222" stroke-width="2"/>
+    <line x1="410" y1="670" x2="640" y2="670"/>
+    <circle cx="480" cy="670" r="3.5" fill="#e67e22"/>
+    <circle cx="640" cy="670" r="5" fill="#fff"/>
+  </g>
+  <g stroke="#222" stroke-width="2" fill="none">
+    <line x1="480" y1="670" x2="480" y2="696"/>
+    <line x1="465" y1="696" x2="495" y2="696"/>
+    <line x1="465" y1="704" x2="495" y2="704"/>
+    <line x1="480" y1="704" x2="480" y2="720"/>
+  </g>
+  <text x="300" y="646" text-anchor="middle" font-weight="bold" fill="#e67e22">fil orange</text>
+  <text x="300" y="702" text-anchor="middle" fill="#e67e22" font-size="12">(azimut)</text>
+  <text x="385" y="656" text-anchor="middle" font-size="12" fill="#222">10 kΩ</text>
+  <text x="652" y="674" font-weight="bold" fill="#111">A0 (Nano)</text>
+  <text x="502" y="706" font-size="12" fill="#222">100 nF</text>
+
+  <!-- fil A : référence A0, dédié -->
+  <polyline points="900,408 900,720 60,720" fill="none" stroke="#8b5a2b" stroke-width="2.5" stroke-dasharray="9 5"/>
+  <circle cx="480" cy="720" r="3.5" fill="#8b5a2b"/>
+  <text x="600" y="712" font-weight="bold" fill="#8b5a2b">fil A (dédié à A0)</text>
+  <text x="600" y="738" font-size="12" fill="#8b5a2b">brun → GND du Nano, rien d'autre dessus</text>
+
+  <!-- point étoile -->
+  <circle cx="60" cy="720" r="7" fill="#222"/>
+  <text x="76" y="748" font-weight="bold" fill="#111">GND du Nano = point étoile</text>
+
+  <!-- notes -->
+  <text x="30" y="785" font-size="12" fill="#444">Nano alimenté par l'USB seulement ; son 5 V reste la référence de l'ADC et ne sert plus aux bobines.</text>
+  <text x="30" y="803" font-size="12" fill="#444">Relais SRD-05VDC-SL-C (bobine 5 V, ~70 mA). Fils vert et jaune du rotor : non branchés.</text>
+</svg>
