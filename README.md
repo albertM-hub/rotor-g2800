@@ -2,7 +2,7 @@
 
 Pilotage du rotor d'azimut **Yaesu G-2800DXC** depuis un PC, avec un Arduino Nano et deux relais branchés sur la prise de commande externe du boîtier de contrôle. Le Nano lit l'azimut sur la sortie analogique du boîtier et répond au protocole **Yaesu GS-232A** (sous-ensemble), ce qui le rend compatible avec les logiciels de suivi qui parlent ce protocole. Une interface graphique en Python (carte du monde, recherche d'indicatif QRZ, ligne de cap) est fournie.
 
-Article de présentation : [hamanalyst.org — *titre de l'article à compléter*](https://hamanalyst.org/) <!-- TODO : lien définitif -->
+Article détaillé (construction, mesures) : [Contrôleur DIY rotor Yaesu G-2800 : Arduino Nano et GS-232A](https://hamanalyst.org/controleur-rotor-yaesu-g2800-arduino/) sur hamanalyst.org
 
 ![Interface rotor_control.py : carte, cap vers la cible, panneaux de commande](docs/appli-rotor.png)
 
@@ -21,6 +21,7 @@ Article de présentation : [hamanalyst.org — *titre de l'article à compléter
 | `scripts/pas_rotor.py` | Petit pas R → L avec garde ±20° |
 | `scripts/m_test.py` | Essai `M <cible>` chronométré, avec gardes |
 | `scripts/goto_test.py` | Essai de positionnement |
+| `scripts/b_rotation.py` | Contrôle du 5 V en charge : rotation R de N secondes avec lecture de `\B` |
 | `docs/schema_rotor_g2800.svg` / `.png` | Schéma électrique |
 | `docs/plan_plaque_rotor_g2800.svg` | Plan de pose sur plaque à pastilles |
 | `docs/guide_plaque_rotor_g2800.md` | Guide de montage de la plaque, liste des fils, contrôles |
@@ -120,7 +121,7 @@ key =
 - **Station** : coordonnées de votre antenne (degrés décimaux, Est et Nord positifs). Elles servent au calcul des caps et au tracé.
 - **QRZ** : identifiants QRZ.com. La recherche d'indicatif utilise l'API XML de QRZ, qui demande un abonnement XML.
 - Les variables d'environnement `ROTOR_PORT`, `ROTOR_QRZ_USER`, `ROTOR_QRZ_PASS` et `ROTOR_QRZ_KEY` ont priorité sur le fichier.
-- Les scripts de test (`test_comm.py`, `calib_read.py`, etc.) ont leur port en constante `PORT` en tête de fichier : adaptez-la si besoin.
+- Les scripts de test ont leur port écrit dans le fichier : constante `PORT` en tête de fichier pour `calib_read.py`, `goto_test.py`, `m_test.py`, `pas_rotor.py` et `relay_test.py` ; directement dans l'appel `serial.Serial(...)` pour `test_comm.py` et `b_rotation.py`. Adaptez-le si besoin.
 
 ## Utilisation
 
