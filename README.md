@@ -43,7 +43,7 @@ Article de présentation : [hamanalyst.org — *titre de l'article à compléter
 | 1 | **Alimentation 5 V séparée** (≥ 500 mA) | Uniquement pour les bobines ; **jamais reliée au 5 V du Nano** |
 | 1 | Plaque à pastilles 34 × 26 trous, borniers 2 et 4 points | Voir `docs/` |
 
-**Pourquoi une alimentation séparée pour les bobines ?** Le 5 V USB du Nano est aussi la référence de mesure de l'azimut. Bobines alimentées par le Nano : chute de 3 % à chaque collage et lecture fausse de 5 à 10° pendant la rotation. Avec le 5 V séparé et la masse en étoile : chute de 0,8 % et écart de 2 à 4°.
+**Pourquoi une alimentation séparée pour les bobines ?** Le 5 V USB du Nano est aussi la référence de mesure de l'azimut. Bobines alimentées par le Nano : chute de 3 % à chaque collage et lecture fausse de 5 à 10° pendant la rotation. Avec le 5 V séparé et la masse en étoile : chute d'environ 1,6 % (4,53 → 4,45 V, identique sur l'ICSP, la broche +5V et REF) et écart de 2 à 4°.
 
 ## Câblage
 
