@@ -8,6 +8,8 @@ The Nano is wired to the external control socket of the rotator's control box. I
 
 Full write-up (construction, measurements), in French: [Contrôleur DIY rotor Yaesu G-2800 : Arduino Nano et GS-232A](https://hamanalyst.org/controleur-rotor-yaesu-g2800-arduino/) on hamanalyst.org
 
+![The finished controller: Arduino Nano and two relays on perfboard, in its enclosure](docs/Rotor-final1.jpg)
+
 ![rotor_control.py GUI: map, bearing to the target, control panels](docs/appli-rotor.png)
 
 > ⚠️ Amateur build, tested on a single rotator (G-2800DXC). Read the **Safety** section before the first test.
@@ -40,6 +42,7 @@ Full write-up (construction, measurements), in French: [Contrôleur DIY rotor Ya
 | `docs/guide_plaque_rotor_g2800.md` | Board assembly guide, wire list, checks (in French) |
 | `tools/gen_world_map.py` | Regenerates `world_map.png` from the Natural Earth land data |
 | `docs/appli-rotor.png` | GUI screenshot |
+| `docs/Rotor-final1.jpg` | Photo of the finished controller |
 | `rotor_config.example.ini` | Local configuration template |
 
 ## Hardware
