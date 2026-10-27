@@ -126,8 +126,9 @@ port = /dev/serial/by-id/usb-1a86_USB_Serial-if00-port0
 baud = 9600
 
 [station]
-lat = 50.6458
-lon = 5.5417
+# votre latitude/longitude (degrés décimaux, Nord et Est positifs)
+lat = 0.0
+lon = 0.0
 
 [qrz]
 user = VOTRE_INDICATIF
