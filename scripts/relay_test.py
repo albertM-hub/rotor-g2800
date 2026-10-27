@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-# Test des relais du contrôleur rotor ON5AM (GS-232A : R / L / A / S)
+# Relay test for the ON5AM rotator controller (GS-232A: R / L / A / S)
 #
-# Usage :
-#   relay_test.py R [durée_max_s]          RL1 (CW) collé, puis S
-#   relay_test.py L [durée_max_s]          RL2 (CCW) collé, puis S
-#   relay_test.py R --arret A              RL1 collé, arrêt par A au lieu de S
-#   relay_test.py interlock                R, puis L 2 s après : CW doit retomber ~1 s avant que CCW colle
-#   relay_test.py timeout                  R puis plus aucune commande : coupure attendue à 200 s
+# Usage:
+#   relay_test.py R [max_duration_s]       RL1 (CW) energised, then S
+#   relay_test.py L [max_duration_s]       RL2 (CCW) energised, then S
+#   relay_test.py R --arret A              RL1 energised, stopped with A instead of S
+#   relay_test.py interlock                R, then L 2 s later: CW must drop ~1 s before CCW closes
+#   relay_test.py timeout                  R then no more commands: cut-off expected at 200 s
 #
-# Arrêt anticipé : créer le fichier STOP à côté du script.
-# Quoi qu'il arrive (erreur, Ctrl-C, SIGTERM), S est envoyé à la fin (try/finally).
+# Early stop: create a file named STOP next to the script.
+# Whatever happens (error, Ctrl-C, SIGTERM), S is sent at the end (try/finally).
 import os, signal, sys, time
 import serial
 
@@ -50,11 +50,12 @@ def main():
 
     if os.path.exists(STOPFILE):
         os.remove(STOPFILE)
+    # Turn SIGTERM into KeyboardInterrupt so the finally block still sends S
     signal.signal(signal.SIGTERM, lambda *a: (_ for _ in ()).throw(KeyboardInterrupt()))
 
     p = serial.Serial(PORT, 9600, timeout=1)
     try:
-        time.sleep(2.5)  # l'ouverture du port redémarre le Nano (DTR)
+        time.sleep(2.5)  # opening the port resets the Nano (DTR)
         log(f"Bannière : {p.read(p.in_waiting or 1).decode(errors='replace')!r}")
         p.reset_input_buffer()
         send(p, "S", reponse=True)

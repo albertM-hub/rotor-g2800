@@ -1,14 +1,14 @@
-# Identifiants et réglages locaux : jamais dans le dépôt
+# Local credentials and settings: never in the repository
 rotor_config.ini
 
-# Fichiers produits à l'exécution
+# Files produced at run time
 __pycache__/
 *.pyc
 *.log
 calib_releves.txt
 scripts/map_cache.png
 
-# Firmware compilé, sauvegardes
+# Compiled firmware, backups
 *.hex
 *.bak-*
 build/

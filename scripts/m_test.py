@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-# Essai M : envoie « M <cible> », suit C et \B jusqu'à la fin, mesure durée et vitesse.
-# Relais collé détecté par \B (≥ 250 ; 248 au repos). Fin : relais relâchés 4 s d'affilée.
-# Sécurités : S si l'azimut s'éloigne de la cible de plus de 10° par rapport au départ,
-# si l'essai dépasse 150 s, sur erreur ou Ctrl-C. Journal : m_test_<cible>.log
-# Usage : python3 m_test.py 270
+# M test: sends "M <target>", follows C and \B until the end, measures duration and speed.
+# Energised relay detected through \B (≥ 250; 248 at rest): the coil load pulls the Nano's
+# 5 V down, which raises the bandgap reading. End: relays released for 4 s in a row.
+# Safety: S if the azimuth moves more than 10° further from the target than at the start,
+# if the test exceeds 150 s, on error or Ctrl-C. Log: m_test_<target>.log
+# Usage: python3 m_test.py 270
 import serial, sys, time
 
 PORT = "/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0"
 cible = int(sys.argv[1])
 p = serial.Serial(PORT, 9600, timeout=0.5)
-time.sleep(2.5)  # l'ouverture du port redémarre le Nano (DTR)
+time.sleep(2.5)  # opening the port resets the Nano (DTR)
 p.reset_input_buffer()
 log = []
 

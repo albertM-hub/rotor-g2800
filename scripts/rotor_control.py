@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Contrôleur Rotor Yaesu G-2800DXC — ON5AM"""
+"""Yaesu G-2800DXC rotator controller — ON5AM (Tkinter GUI, GS-232A over serial)"""
 
 import tkinter as tk
 import threading, math, time, queue, os, configparser
@@ -21,8 +21,8 @@ except ImportError:
     HAS_PIL = False
 
 # ── Config ────────────────────────────────────────────────────────────────────
-# Réglages locaux hors du code : rotor_config.ini à côté de ce script
-# (modèle : rotor_config.example.ini). Variables d'environnement prioritaires :
+# Local settings kept out of the code: rotor_config.ini next to this script
+# (template: rotor_config.example.ini). Environment variables take precedence:
 # ROTOR_PORT, ROTOR_QRZ_USER, ROTOR_QRZ_PASS, ROTOR_QRZ_KEY.
 _DIR       = os.path.dirname(os.path.abspath(__file__))
 CONFIG_INI = os.path.join(_DIR, "rotor_config.ini")
@@ -30,14 +30,14 @@ _cfg = configparser.ConfigParser(interpolation=None)
 _cfg.read(CONFIG_INI, encoding="utf-8")
 
 def _conf(section, key, env=None, default=""):
-    # Variable d'environnement, sinon fichier ; valeur absente ou vide → default
+    # Environment variable, else config file; missing or empty value → default
     return ((env and os.environ.get(env)) or _cfg.get(section, key, fallback="").strip()
             or default)
 
-# Pas de port par défaut : sans réglage, aucune connexion (évite d'écrire sur un autre appareil)
+# No default port: if not configured, no connection (avoids writing to some other device)
 COM_PORT  = _conf("serie", "port", "ROTOR_PORT")
 BAUD      = int(_conf("serie", "baud", default="9600"))
-# Station : par défaut le centre du carré JO20SP (coordonnées exactes dans rotor_config.ini)
+# Station: defaults to the centre of grid square JO20SP (exact coordinates go in rotor_config.ini)
 QTH_LAT   = float(_conf("station", "lat", default="50.6458"))
 QTH_LON   = float(_conf("station", "lon", default="5.5417"))
 QRZ_USER  = _conf("qrz", "user", "ROTOR_QRZ_USER")
@@ -45,18 +45,18 @@ QRZ_PASS  = _conf("qrz", "password", "ROTOR_QRZ_PASS")
 QRZ_KEY   = _conf("qrz", "key", "ROTOR_QRZ_KEY")
 
 POLL_MS   = 250
-RESIZE_MS = 150   # Redessin de la carte quand la taille ne bouge plus depuis ce délai
+RESIZE_MS = 150   # Redraw the map once the window size has been stable for this long
 
-START_W   = 1100  # Largeur de la fenêtre au démarrage (px)
+START_W   = 1100  # Window width at start-up (px)
 
-MAP_W     = 720   # Taille d'origine de world_map.png
+MAP_W     = 720   # Native size of world_map.png
 MAP_H     = 348
-# Projection de world_map.png : Miller cylindrique, recalée le 2026-10-22 sur les côtes
-# Natural Earth 1:50 M (recouvrement 91 %). x = MAP_X0 + MAP_KX·lon ; y = MAP_Y0 − MAP_KY·Miller(lat)
-MAP_X0    = 349.88  # colonne du méridien 0°
-MAP_KX    = 1.9300  # px par degré de longitude (la carte couvre ≈ 373° : bord droit au-delà de 180° E)
-MAP_Y0    = 219.11  # ligne de l'équateur
-MAP_KY    = 1.9063  # px par degré de l'ordonnée de Miller
+# world_map.png projection: Miller cylindrical, fitted on 2026-10-22 to the Natural Earth
+# 1:50 M coastlines (91 % overlap). x = MAP_X0 + MAP_KX·lon ; y = MAP_Y0 − MAP_KY·Miller(lat)
+MAP_X0    = 349.88  # pixel column of the 0° meridian
+MAP_KX    = 1.9300  # px per degree of longitude (the map spans ≈ 373°: right edge goes past 180° E)
+MAP_Y0    = 219.11  # pixel row of the equator
+MAP_KY    = 1.9063  # px per degree of the Miller ordinate
 MAP_CACHE = os.path.join(_DIR, "map_cache.png")
 WORLD_PNG = os.path.join(_DIR, "world_map.png")
 
@@ -78,7 +78,7 @@ PIL_GRID  = ( 18,  32,  48)
 PIL_EQ    = ( 26,  64,  96)
 PIL_BDR   = (180, 210, 180)
 
-# ── Contours continents (lon, lat) ────────────────────────────────────────────
+# ── Continent outlines (lon, lat) ─────────────────────────────────────────────
 CONTINENTS = [
     [(-168,71),(-160,70),(-141,71),(-135,57),(-130,54),(-125,50),
      (-124,49),(-124,37),(-117,32),(-97,26),(-90,30),(-85,30),
@@ -120,31 +120,33 @@ CONTINENTS = [
     [(-180,-68),(-90,-70),(0,-68),(90,-70),(180,-68),(180,-90),(-180,-90),(-180,-68)],
 ]
 
-# ── Géographie ────────────────────────────────────────────────────────────────
+# ── Geography ─────────────────────────────────────────────────────────────────
 def miller_deg(lat):
-    # Ordonnée de la projection de Miller, exprimée en degrés
+    # Miller projection ordinate, expressed in degrees
     return math.degrees(1.25 * math.log(math.tan(math.pi/4 + 0.4 * math.radians(lat))))
 
 def ll_to_xy(lon, lat):
     return MAP_X0 + MAP_KX * lon, MAP_Y0 - MAP_KY * miller_deg(lat)
 
 def xy_to_ll(x, y):
-    # Inverse de ll_to_xy (coordonnées de la carte de base MAP_W × MAP_H)
+    # Inverse of ll_to_xy (coordinates on the base map, MAP_W × MAP_H)
     lon = (x - MAP_X0) / MAP_KX
-    if lon >  180: lon -= 360   # bord droit de la carte : au-delà de 180° E
+    if lon >  180: lon -= 360   # right edge of the map: beyond 180° E
     if lon < -180: lon += 360
+    # Inverse Miller: lat = 2.5·atan(exp(0.8·y)) − 5π/8, with y in radians
     ym  = math.radians((MAP_Y0 - y) / MAP_KY)
     lat = math.degrees(2.5 * math.atan(math.exp(0.8 * ym)) - 0.625 * math.pi)
     return lon, lat
 
 def central_angle(lat1, lon1, lat2, lon2):
-    # Distance angulaire sur le grand cercle (degrés), formule de haversine
+    # Great-circle angular distance (degrees), haversine formula
     la1, la2 = math.radians(lat1), math.radians(lat2)
     dla, dlo = la2 - la1, math.radians(lon2 - lon1)
     a = math.sin(dla/2)**2 + math.cos(la1)*math.cos(la2)*math.sin(dlo/2)**2
     return math.degrees(2 * math.asin(min(1.0, math.sqrt(a))))
 
 def bearing(lat1, lon1, lat2, lon2):
+    # Initial great-circle bearing from point 1 to point 2, 0–360° clockwise from true north
     la1, la2 = math.radians(lat1), math.radians(lat2)
     dl = math.radians(lon2 - lon1)
     x = math.sin(dl) * math.cos(la2)
@@ -152,7 +154,8 @@ def bearing(lat1, lon1, lat2, lon2):
     return math.degrees(math.atan2(x, y)) % 360
 
 def great_circle_pts(lat1, lon1, az_deg, n=180, dist_deg=180.0):
-    # n + 1 points de 0 à dist_deg (degrés d'arc) le long du cap az_deg
+    # n + 1 points from 0 to dist_deg (degrees of arc) along bearing az_deg
+    # ("destination point" formula on a sphere, from the station at lat1/lon1)
     pts = []
     la1r = math.radians(lat1)
     lo1r = math.radians(lon1)
@@ -166,11 +169,11 @@ def great_circle_pts(lat1, lon1, az_deg, n=180, dist_deg=180.0):
         pts.append((math.degrees(lat2), math.degrees(lo1r + dlon)))
     return pts
 
-# ── Génération carte ──────────────────────────────────────────────────────────
+# ── Map generation ────────────────────────────────────────────────────────────
 def _draw_base(w, h):
     img  = Image.new("RGB", (w, h), PIL_OCEAN)
     draw = ImageDraw.Draw(img)
-    sx, sy = w / MAP_W, h / MAP_H   # même projection que world_map.png
+    sx, sy = w / MAP_W, h / MAP_H   # same projection as world_map.png
     for lon in range(-180, 181, 30):
         x = int(ll_to_xy(lon, 0)[0] * sx)
         draw.line([(x,0),(x,h)], fill=PIL_GRID)
@@ -178,6 +181,7 @@ def _draw_base(w, h):
         y = int(ll_to_xy(0, lat)[1] * sy)
         draw.line([(0,y),(w,y)], fill=PIL_EQ if lat == 0 else PIL_GRID)
     for poly in CONTINENTS:
+        # Densify each edge (one point every ~3°) so straight lon/lat edges follow the projection
         dense = []
         for i in range(len(poly)):
             lo1, la1 = poly[i]
@@ -196,8 +200,8 @@ def _draw_base(w, h):
 
 
 def _colorize_bw_map(path):
-    """Convertit une carte N/B ou palette+transparence en carte colorée."""
-    # Fond blanc = océan ; on colle l'image par-dessus avec son alpha
+    """Turn a black-and-white (or palette + transparency) map into the coloured map."""
+    # White background = ocean; paste the image on top using its alpha channel
     raw = Image.open(path).convert("RGBA")
     bg  = Image.new("RGBA", raw.size, (255, 255, 255, 255))
     bg.paste(raw, mask=raw.split()[3])
@@ -206,7 +210,7 @@ def _colorize_bw_map(path):
     land_mask = arr < 128
     out[ land_mask] = PIL_LAND
     out[~land_mask] = PIL_OCEAN
-    # Grille
+    # Grid
     img = Image.fromarray(out)
     draw = ImageDraw.Draw(img)
     for lon in range(-180, 181, 30):
@@ -218,19 +222,19 @@ def _colorize_bw_map(path):
     return img
 
 def _build_map():
-    # 1. world_map.png fourni par l'utilisateur (carte N/B) → prioritaire
+    # 1. world_map.png supplied with the project (black-and-white map) → first choice
     if os.path.exists(WORLD_PNG):
         print("[carte] Colorisation de world_map.png…")
         return _colorize_bw_map(WORLD_PNG)
 
-    # 2. Cache existant (généré lors d'un lancement précédent)
+    # 2. Existing cache (generated by a previous run)
     if os.path.exists(MAP_CACHE):
         img = Image.open(MAP_CACHE).convert("RGB")
         if img.size != (MAP_W, MAP_H):
             img = img.resize((MAP_W, MAP_H), Image.LANCZOS)
         return img
 
-    # 3. Fallback vectoriel intégré
+    # 3. Built-in vector fallback
     print("[carte] Fallback vectoriel utilisé")
     arr = _draw_base(MAP_W, MAP_H)
     img = Image.fromarray(arr.astype(np.uint8))
@@ -275,7 +279,7 @@ def qrz_lookup(callsign):
     if not (QRZ_USER and QRZ_PASS):
         return None, "QRZ non configuré : voir rotor_config.example.ini"
 
-    # Login si pas de session
+    # Log in if there is no session yet (the XML API returns a session key)
     if not _qrz_session:
         try:
             url  = (f"https://xmldata.qrz.com/xml/current/"
@@ -297,13 +301,16 @@ def qrz_lookup(callsign):
             print(f"[QRZ] exception login: {e}")
             return None, f"QRZ injoignable: {e}"
 
+    # Expired session: forget the key and retry once with a fresh login
     result, err = fetch(_qrz_session)
     if err and ('session' in (err or '').lower()):
         _qrz_session = None
         return qrz_lookup(callsign)
     return result, err
 
-# ── Thread série ──────────────────────────────────────────────────────────────
+# ── Serial thread ─────────────────────────────────────────────────────────────
+# Owns the serial port: sends queued commands, posts received lines and status to rx_q,
+# and reconnects every 3 s if the port is missing or drops (e.g. USB unplugged)
 class SerialThread(threading.Thread):
     def __init__(self, port, baud, rx_q):
         super().__init__(daemon=True)
@@ -348,15 +355,15 @@ class RotorApp(tk.Tk):
         self.rx_q       = queue.Queue()
         self.serial_th  = None
         self._photo     = None
-        self.scale      = 1.0    # Carte affichée / carte de base (MAP_W × MAP_H)
-        self._base_img  = None   # Carte PIL à la taille de base
+        self.scale      = 1.0    # Displayed map / base map (MAP_W × MAP_H)
+        self._base_img  = None   # PIL map at base size
         self._resize_job = None
-        self._heading   = None   # Azimut lu sur le rotor (ligne pointillée)
-        self._target    = None   # Cible (az, lat, lon, nom) ; lat/lon None pour un azimut seul
+        self._heading   = None   # Azimuth read from the rotator (dotted line)
+        self._target    = None   # Target (az, lat, lon, name); lat/lon None for a bare azimuth
         self._build_ui()
         self.update_idletasks()
         self.minsize(self.winfo_reqwidth(), self.winfo_reqheight())
-        # Départ à START_W px de large ; hauteur selon les proportions de la carte
+        # Start START_W px wide; height follows the map's aspect ratio
         w = min(START_W, self.winfo_screenwidth())
         h = self.winfo_reqheight() - MAP_H + round((w - 12) * MAP_H / MAP_W)
         self.geometry(f"{w}x{min(h, self.winfo_screenheight() - 60)}")
@@ -369,9 +376,9 @@ class RotorApp(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self._on_close)
         self._poll()
 
-    # ── Construction UI ───────────────────────────────────────────────────────
+    # ── UI construction ───────────────────────────────────────────────────────
     def _build_ui(self):
-        # La carte occupe toute la place libre ; le canvas y est centré, aux proportions de la carte
+        # The map takes all the free space; the canvas is centred in it, keeping the map's aspect ratio
         self.map_frame = tk.Frame(self, bg=C_BG, width=MAP_W, height=MAP_H)
         self.map_frame.grid(row=0, column=0, columnspan=4, padx=6, pady=6, sticky="nsew")
         self.map_frame.bind("<Configure>", self._on_map_resize)
@@ -385,7 +392,7 @@ class RotorApp(tk.Tk):
             f.grid(row=1, column=col, padx=3, pady=(0,6), sticky="nsew")
             return f
 
-        # Azimut courant
+        # Current azimuth
         p0 = panel(0)
         tk.Label(p0, text="AZIMUT", bg=C_PANEL, fg=C_DIM,
                  font=("Consolas",8)).pack(pady=(8,0))
@@ -413,7 +420,7 @@ class RotorApp(tk.Tk):
                       relief="flat", width=5, activebackground="#404040",
                       command=cmd).pack(side="left", padx=2)
 
-        # Indicatif QRZ
+        # QRZ callsign
         p2 = panel(2)
         tk.Label(p2, text="INDICATIF (QRZ)", bg=C_PANEL, fg=C_DIM,
                  font=("Consolas",8)).pack(pady=(8,4))
@@ -431,7 +438,7 @@ class RotorApp(tk.Tk):
         self.lbl_call.pack(pady=(4,6))
         self._wrap_to_panel(self.lbl_call, p2)
 
-        # Statut
+        # Status
         p3 = panel(3)
         tk.Label(p3, text="STATUT", bg=C_PANEL, fg=C_DIM,
                  font=("Consolas",8)).pack(pady=(8,4))
@@ -454,13 +461,13 @@ class RotorApp(tk.Tk):
         self.rowconfigure(0, weight=1)
 
     def _wrap_to_panel(self, label, panel):
-        # Retour à la ligne à la largeur réelle du panneau (suit le redimensionnement)
+        # Wrap text at the panel's actual width (follows resizing)
         panel.bind("<Configure>",
                    lambda e: label.config(wraplength=max(60, e.width - 12)), add="+")
 
-    # ── Carte ─────────────────────────────────────────────────────────────────
+    # ── Map ───────────────────────────────────────────────────────────────────
     def _xy(self, lon, lat):
-        # Coordonnées à l'échelle de la carte affichée
+        # Coordinates scaled to the displayed map
         x, y = ll_to_xy(lon, lat)
         return x * self.scale, y * self.scale
 
@@ -478,7 +485,7 @@ class RotorApp(tk.Tk):
         self._render_map()
 
     def _on_map_resize(self, event):
-        # Redessin différé : rien pendant le glissement, une fois la taille stabilisée
+        # Deferred redraw: nothing while dragging, once the size has settled
         if self._resize_job:
             self.after_cancel(self._resize_job)
         self._resize_job = self.after(RESIZE_MS, self._apply_scale, event.width, event.height)
@@ -494,7 +501,7 @@ class RotorApp(tk.Tk):
         self._render_map()
 
     def _render_map(self):
-        # Fond de carte à l'échelle courante, puis tracés par-dessus
+        # Base map at the current scale, then overlays on top
         self.canvas.delete("mapbg")
         if self._base_img is not None:
             size = (round(MAP_W * self.scale), round(MAP_H * self.scale))
@@ -527,7 +534,7 @@ class RotorApp(tk.Tk):
                 except: pass
 
     def _gc_line(self, az, dist_deg, **opts):
-        # Grand cercle depuis le QTH sur dist_deg degrés d'arc, coupé à l'antiméridien
+        # Great circle from the QTH over dist_deg degrees of arc, split at the antimeridian
         pts_ll = great_circle_pts(QTH_LAT, QTH_LON, az,
                                   n=max(2, int(dist_deg)), dist_deg=dist_deg)
         segs, seg, prev_x = [], [], None
@@ -547,7 +554,7 @@ class RotorApp(tk.Tk):
                                         smooth=True, tags="overlay", **opts)
 
     def _draw_overlays(self):
-        # Cap du rotor (pointillé vert), cible (rouge, arrêtée au point visé), QTH par-dessus
+        # Rotator heading (green dotted), target (red, ending at the target point), QTH on top
         c = self.canvas
         c.delete("overlay")
         if self._heading is not None:
@@ -580,7 +587,7 @@ class RotorApp(tk.Tk):
         self._target = (az, lat, lon, name)
         self._draw_overlays()
 
-    # ── Événements ────────────────────────────────────────────────────────────
+    # ── Events ────────────────────────────────────────────────────────────────
     def _map_click(self, event):
         lon, lat = xy_to_ll(event.x / self.scale, event.y / self.scale)
         az  = bearing(QTH_LAT, QTH_LON, lat, lon)
@@ -592,7 +599,7 @@ class RotorApp(tk.Tk):
         try:
             az = int(self.entry_az.get()) % 360
             self._send(f"M {az:03d}")
-            # Une cible localisée (QRZ, clic) reste affichée si GO vise son cap
+            # A located target (QRZ, click) stays displayed if GO aims at its bearing
             if not (self._target and self._target[1] is not None
                     and round(self._target[0]) % 360 == az):
                 self._set_target(az)
@@ -621,22 +628,22 @@ class RotorApp(tk.Tk):
         self.entry_az.insert(0, f"{az:.0f}")
         self.lbl_call.config(text=f"{country}\n→ {az:.1f}°  (GO pour tourner)", fg=C_GREEN)
         self._set_target(az, lat, lon, call)
-        # Pas de M ici : la rotation ne part qu'avec GO, jamais sur une simple recherche
+        # No M here: rotation only starts with GO, never on a mere lookup
 
-    # ── Série ─────────────────────────────────────────────────────────────────
+    # ── Serial ────────────────────────────────────────────────────────────────
     def _start_serial(self):
         self.serial_th = SerialThread(COM_PORT, BAUD, self.rx_q)
         self.serial_th.start()
 
     def _on_close(self):
-        # S avant de quitter : aucun relais ne doit rester collé après la fermeture
+        # Send S before quitting: no relay must stay energised after the window closes
         th = self.serial_th
         if th and th.connected:
             th.send("S")
             limite = time.time() + 1.0
             while not th.tx_q.empty() and time.time() < limite:
                 time.sleep(0.02)
-            time.sleep(0.1)  # laisse partir l'écriture en cours
+            time.sleep(0.1)  # let the pending write go out
             th.stop()
         self.destroy()
 

@@ -1,106 +1,124 @@
-# Contrôleur DIY pour rotor Yaesu G-2800DXC (ON5AM)
+[Version française](README.fr.md)
 
-Pilotage du rotor d'azimut **Yaesu G-2800DXC** depuis un PC, avec un Arduino Nano et deux relais branchés sur la prise de commande externe du boîtier de contrôle. Le Nano lit l'azimut sur la sortie analogique du boîtier et répond au protocole **Yaesu GS-232A** (sous-ensemble), ce qui le rend compatible avec les logiciels de suivi qui parlent ce protocole. Une interface graphique en Python (carte du monde, recherche d'indicatif QRZ, ligne de cap) est fournie.
+# DIY controller for the Yaesu G-2800DXC rotator (ON5AM)
 
-Article détaillé (construction, mesures) : [Contrôleur DIY rotor Yaesu G-2800 : Arduino Nano et GS-232A](https://hamanalyst.org/controleur-rotor-yaesu-g2800-arduino/) sur hamanalyst.org
+Control a Yaesu G-2800DXC azimuth rotator from a PC with an Arduino Nano and two relays, using the Yaesu GS-232A protocol.
 
-![Interface rotor_control.py : carte, cap vers la cible, panneaux de commande](docs/appli-rotor.png)
+The Nano is wired to the external control socket of the rotator's control box. It reads the azimuth from the box's analog output and answers a subset of the **Yaesu GS-232A** protocol, so it works with tracking software that speaks this protocol. A Python GUI is included: world map, QRZ callsign lookup, bearing line to the target.
 
-> ⚠️ Montage amateur, testé sur un seul rotor (G-2800DXC). Lisez la section **Sécurité** avant le premier essai.
+Full write-up (construction, measurements), in French: [Contrôleur DIY rotor Yaesu G-2800 : Arduino Nano et GS-232A](https://hamanalyst.org/controleur-rotor-yaesu-g2800-arduino/) on hamanalyst.org
 
-## Contenu du dépôt
+![The finished controller: Arduino Nano and two relays on perfboard, in its enclosure](docs/Rotor-final1.jpg)
 
-| Dossier / fichier | Rôle |
+![rotor_control.py GUI: map, bearing to the target, control panels](docs/appli-rotor.png)
+
+> ⚠️ Amateur build, tested on a single rotator (G-2800DXC). Read the **Safety** section before the first test.
+
+## Features
+
+- **GS-232A subset** over USB serial at 9600 baud: `C`, `M`, `W`, `R`, `L`, `A`, `S`.
+- **Two-stage positioning**: rotation guided by the reading while moving, then a check at rest and short timed correction pulses (stop tolerance ±2°).
+- **6-point calibration** (ADC → degrees) with linear interpolation, plus two diagnostic commands: `\R` (raw ADC) and `\B` (internal 1.1 V reference, to check the 5 V supply).
+- **Firmware safety**: CW/CCW interlock, 1 s pause on direction reversal, 0–360° software limit, stall detection, 300 s timeout, no relay energised at power-up.
+- **Tkinter GUI**: world map in Miller projection, great-circle bearing from your station, QRZ.com lookup (XML subscription required), click-on-map targeting, F11 full screen. The GUI labels are in French.
+- **Test scripts** for each step of the build: serial link, relays, calibration, positioning, 5 V under load.
+
+## Repository contents
+
+| Folder / file | Purpose |
 |---|---|
-| `firmware/rotor_k3ng_ON5AM/rotor_k3ng_ON5AM.ino` | Firmware du Nano (GS-232A, sécurités, étalonnage) |
-| `scripts/rotor_control.py` | Interface graphique (Tkinter) |
-| `scripts/world_map.png` | Fond de carte de l'interface (projection de Miller, d'après Natural Earth) |
-| `scripts/test_comm.py` | Test de communication (bannière + 15 lectures d'azimut) |
-| `scripts/calib_read.py` | Relevé d'un point d'étalonnage (20 lectures brutes de l'ADC) |
-| `scripts/relay_test.py` | Test des relais |
-| `scripts/pas_rotor.py` | Petit pas R → L avec garde ±20° |
-| `scripts/m_test.py` | Essai `M <cible>` chronométré, avec gardes |
-| `scripts/goto_test.py` | Essai de positionnement |
-| `scripts/b_rotation.py` | Contrôle du 5 V en charge : rotation R de N secondes avec lecture de `\B` |
-| `docs/schema_rotor_g2800.svg` / `.png` | Schéma électrique |
-| `docs/plan_plaque_rotor_g2800.svg` | Plan de pose sur plaque à pastilles |
-| `docs/guide_plaque_rotor_g2800.md` | Guide de montage de la plaque, liste des fils, contrôles |
-| `tools/gen_world_map.py` | Régénère `world_map.png` depuis les terres Natural Earth |
-| `docs/appli-rotor.png` | Capture de l'interface |
-| `rotor_config.example.ini` | Modèle de configuration locale |
+| `firmware/rotor_k3ng_ON5AM/rotor_k3ng_ON5AM.ino` | Nano firmware (GS-232A, safety, calibration) |
+| `scripts/rotor_control.py` | Graphical interface (Tkinter) |
+| `scripts/world_map.png` | GUI base map (Miller projection, from Natural Earth) |
+| `scripts/test_comm.py` | Communication test (banner + 15 azimuth readings) |
+| `scripts/calib_read.py` | Records one calibration point (20 raw ADC readings) |
+| `scripts/relay_test.py` | Relay test |
+| `scripts/pas_rotor.py` | Small R → L step with a ±20° guard |
+| `scripts/m_test.py` | Timed `M <target>` test, with guards |
+| `scripts/goto_test.py` | Positioning test |
+| `scripts/b_rotation.py` | 5 V check under load: R rotation for N seconds while reading `\B` |
+| `docs/schema_rotor_g2800.svg` / `.png` | Schematic |
+| `docs/plan_plaque_rotor_g2800.svg` | Perfboard layout |
+| `docs/guide_plaque_rotor_g2800.md` | Board assembly guide, wire list, checks (in French) |
+| `tools/gen_world_map.py` | Regenerates `world_map.png` from the Natural Earth land data |
+| `docs/appli-rotor.png` | GUI screenshot |
+| `docs/Rotor-final1.jpg` | Photo of the finished controller |
+| `rotor_config.example.ini` | Local configuration template |
 
-## Matériel
+## Hardware
 
-| Qté | Composant | Remarque |
+| Qty | Part | Note |
 |---|---|---|
-| 1 | Arduino Nano (ATmega328P, CH340) | Alimenté par l'USB du PC ; son 5 V sert de référence à l'ADC |
-| 2 | Relais **SRD-05VDC-SL-C** (bobine 5 V, ≈ 70 mA) | RL1 = rotation R (CW), RL2 = rotation L (CCW) |
-| 2 | Transistor **2N2222** | Commande des bobines (D2 / D3 à HIGH → relais collé) |
-| 2 | Diode 1N4007 | Roue libre sur chaque bobine |
-| 2 | Résistance 1 kΩ | Base des transistors |
-| 3 | Résistance 10 kΩ | Rappel des bases à la masse ; entrée A0 |
-| 2 | Condensateur 100 nF | Filtre A0 ; découplage des bobines |
-| 1 | Condensateur 470 µF / 10 V | Réserve sur le 5 V des bobines |
-| 1 | **Alimentation 5 V séparée** (≥ 500 mA) | Uniquement pour les bobines ; **jamais reliée au 5 V du Nano** |
-| 1 | Plaque à pastilles 34 × 26 trous, borniers 2 et 4 points | Voir `docs/` |
+| 1 | Arduino Nano (ATmega328P, CH340) | Powered from the PC's USB; its 5 V is the ADC reference |
+| 2 | **SRD-05VDC-SL-C** relay (5 V coil, ≈ 70 mA) | RL1 = R rotation (CW), RL2 = L rotation (CCW) |
+| 2 | **2N2222** transistor | Coil drivers (D2 / D3 HIGH → relay energised) |
+| 2 | 1N4007 diode | Flyback diode on each coil |
+| 2 | 1 kΩ resistor | Transistor bases |
+| 3 | 10 kΩ resistor | Base pull-downs to ground; A0 input |
+| 2 | 100 nF capacitor | A0 filter; coil decoupling |
+| 1 | 470 µF / 10 V capacitor | Reservoir on the coil 5 V |
+| 1 | **Separate 5 V supply** (≥ 500 mA) | Coils only; **never connected to the Nano's 5 V** |
+| 1 | Perfboard 34 × 26 holes, 2- and 4-way terminal blocks | See `docs/` |
 
-**Pourquoi une alimentation séparée pour les bobines ?** Le 5 V USB du Nano est aussi la référence de mesure de l'azimut. Bobines alimentées par le Nano : chute de 3 % à chaque collage et lecture fausse de 5 à 10° pendant la rotation. Avec le 5 V séparé et la masse en étoile : chute d'environ 1,6 % (4,53 → 4,45 V, identique sur l'ICSP, la broche +5V et REF) et écart de 2 à 4°.
+**Why a separate supply for the coils?** The Nano's USB 5 V is also the reference for the azimuth measurement. With the coils powered from the Nano, the supply dropped by 3 % each time a relay closed and the reading was off by 5 to 10° during rotation. With the separate 5 V and a star ground, the drop is about 1.6 % (4.53 → 4.45 V, identical on ICSP, the +5V pin and REF) and the error is 2 to 4°.
 
-## Câblage
+![Schematic](docs/schema_rotor_g2800.png)
 
-### Câble de commande du rotor (prise externe du boîtier G-2800)
+## Wiring
 
-Câblage **vérifié sur le rotor** (aiguille du boîtier) : le relais RL1, commandé par la commande R, doit faire **monter** l'azimut.
+### Rotator control cable (external socket of the G-2800 control box)
 
-| Fil du câble | Rôle | Branché sur | Bornier J1 |
+Wiring **checked on the rotator** (control box needle): relay RL1, driven by the R command, must make the azimuth **increase**.
+
+| Cable wire | Function | Connected to | Terminal J1 |
 |---|---|---|---|
-| **Brun** | Masse du boîtier | Bus de masse (et fil A vers le GND du Nano, voir plus bas) | AG18 |
-| **Orange** | Tension d'azimut (≈ 0,09 V à 0°, ≈ 3,4 V à 360°) | 10 kΩ → A0, 100 nF vers la masse | AG24 |
-| **Rouge** | Rotation **R / CW** (azimut ↑) quand il est mis à la masse | Contact NO de **RL1** (commandé par **D2**) | AG20 |
-| **Noir** | Rotation **L / CCW** (azimut ↓) quand il est mis à la masse | Contact NO de **RL2** (commandé par **D3**) | AG22 |
-| Vert, jaune | — | **Non branchés** | — |
+| **Brown** | Control box ground | Ground bus (and wire A to the Nano's GND, see below) | AG18 |
+| **Orange** | Azimuth voltage (≈ 0.09 V at 0°, ≈ 3.4 V at 360°) | 10 kΩ → A0, 100 nF to ground | AG24 |
+| **Red** | **R / CW** rotation (azimuth ↑) when pulled to ground | NO contact of **RL1** (driven by **D2**) | AG20 |
+| **Black** | **L / CCW** rotation (azimuth ↓) when pulled to ground | NO contact of **RL2** (driven by **D3**) | AG22 |
+| Green, yellow | — | **Not connected** | — |
 
-Les contacts COM des deux relais vont à la masse. La broche de vitesse du boîtier n'est pas utilisée : en commande externe, le rotor tourne à environ **2,0 à 2,5°/s** (≈ 4,5°/s depuis la face avant).
+The COM contacts of both relays go to ground. The control box's speed pin is not used: under external control the rotator turns at about **2.0 to 2.5°/s** (≈ 4.5°/s from the front panel).
 
-> Ne vous fiez pas aux brochages trouvés sur le Web ni aux couleurs supposées : contrôlez le sens à l'aiguille du boîtier. **Si R fait descendre l'aiguille, croisez ROUGE et NOIR** sur le bornier.
+> Do not trust pinouts found on the web or assumed wire colours: check the direction on the control box needle. **If R makes the needle go down, swap RED and BLACK** on the terminal block.
 
 ### Arduino Nano
 
-| Broche | Liaison |
+| Pin | Connection |
 |---|---|
-| D2 | 1 kΩ → base Q1 (2N2222) → bobine RL1 |
-| D3 | 1 kΩ → base Q2 (2N2222) → bobine RL2 |
-| A0 | Fil orange via 10 kΩ, 100 nF vers la masse du fil A |
-| GND (fil A) | Brun du rotor + 100 nF de A0 : masse de mesure, rien d'autre |
-| GND (fil B) | Bus de masse puissance : émetteurs, COM des relais, − de l'alim 5 V |
-| +5V | **Non utilisée** |
+| D2 | 1 kΩ → base of Q1 (2N2222) → RL1 coil |
+| D3 | 1 kΩ → base of Q2 (2N2222) → RL2 coil |
+| A0 | Orange wire through 10 kΩ, 100 nF to the ground of wire A |
+| GND (wire A) | Rotator brown wire + the A0 100 nF: measurement ground, nothing else |
+| GND (wire B) | Power ground bus: emitters, relay COMs, − of the 5 V supply |
+| +5V | **Not used** |
 
-Les deux masses se rejoignent uniquement au GND du Nano (masse en étoile). Détails, liste des fils et contrôles avant mise sous tension : `docs/guide_plaque_rotor_g2800.md`.
+The two grounds only meet at the Nano's GND (star ground). Details, wire list and checks before power-up: `docs/guide_plaque_rotor_g2800.md` (in French).
 
 ## Installation
 
 ### Firmware
 
-1. Ouvrir `firmware/rotor_k3ng_ON5AM/rotor_k3ng_ON5AM.ino` dans l'IDE Arduino.
-2. Carte : **Arduino Nano**. Processeur : **ATmega328P (Old Bootloader)** pour les clones CH340 courants (téléversement à 57600 bauds).
-3. Téléverser. **Boîtier du rotor éteint pendant le téléversement**, ou bornier du rotor débranché.
+1. Open `firmware/rotor_k3ng_ON5AM/rotor_k3ng_ON5AM.ino` in the Arduino IDE.
+2. Board: **Arduino Nano**. Processor: **ATmega328P (Old Bootloader)** for the common CH340 clones (upload at 57600 baud).
+3. Upload. **Keep the rotator control box switched off during the upload**, or unplug the rotator terminal block.
 
-Au démarrage, le Nano envoie `K3NG Rotor ON5AM v1.0` sur le port série à 9600 bauds.
+At start-up the Nano sends `K3NG Rotor ON5AM v1.0` on the serial port at 9600 baud.
 
-### Interface et scripts
+### GUI and scripts
 
 ```bash
-python3 -m pip install pyserial pillow numpy   # tkinter : paquet python3-tk sous Debian/Ubuntu
+python3 -m pip install pyserial pillow numpy   # tkinter: python3-tk package on Debian/Ubuntu
 cp rotor_config.example.ini scripts/rotor_config.ini
-# éditer scripts/rotor_config.ini (port série, station, QRZ)
+# edit scripts/rotor_config.ini (serial port, station, QRZ)
 python3 scripts/rotor_control.py
 ```
 
-Sous Linux, l'utilisateur doit être membre du groupe `dialout` pour accéder au port série.
+On Linux, the user must be a member of the `dialout` group to access the serial port.
 
-## Configuration : `scripts/rotor_config.ini`
+## Configuration: `scripts/rotor_config.ini`
 
-`rotor_config.ini` se place **à côté de `rotor_control.py`**. Il est exclu du dépôt par `.gitignore` : vos identifiants ne doivent figurer nulle part ailleurs.
+`rotor_config.ini` goes **next to `rotor_control.py`**. It is excluded from the repository by `.gitignore`: your credentials must not appear anywhere else.
 
 ```ini
 [serie]
@@ -112,69 +130,79 @@ lat = 50.6458
 lon = 5.5417
 
 [qrz]
-user = VOTRE_INDICATIF
-password = VOTRE_MOT_DE_PASSE
+user = YOUR_CALLSIGN
+password = YOUR_PASSWORD
 key =
 ```
 
-- **Port série** : sous Linux, préférez le chemin stable `/dev/serial/by-id/…` (`ls -l /dev/serial/by-id/`) au nom `/dev/ttyUSBx`, qui peut changer. Sans port configuré, l'interface ne se connecte à rien.
-- **Station** : coordonnées de votre antenne (degrés décimaux, Est et Nord positifs). Elles servent au calcul des caps et au tracé.
-- **QRZ** : identifiants QRZ.com. La recherche d'indicatif utilise l'API XML de QRZ, qui demande un abonnement XML.
-- Les variables d'environnement `ROTOR_PORT`, `ROTOR_QRZ_USER`, `ROTOR_QRZ_PASS` et `ROTOR_QRZ_KEY` ont priorité sur le fichier.
-- Les scripts de test ont leur port écrit dans le fichier : constante `PORT` en tête de fichier pour `calib_read.py`, `goto_test.py`, `m_test.py`, `pas_rotor.py` et `relay_test.py` ; directement dans l'appel `serial.Serial(...)` pour `test_comm.py` et `b_rotation.py`. Adaptez-le si besoin.
+The section names (`serie`, `station`, `qrz`) are read by the code: keep them as they are.
 
-## Utilisation
+- **Serial port**: on Linux, prefer the stable path `/dev/serial/by-id/…` (`ls -l /dev/serial/by-id/`) to the `/dev/ttyUSBx` name, which can change. With no port configured, the GUI does not connect to anything.
+- **Station**: coordinates of your antenna (decimal degrees, East and North positive). They are used to compute bearings and draw the map.
+- **QRZ**: QRZ.com credentials. Callsign lookup uses the QRZ XML API, which requires an XML subscription.
+- The environment variables `ROTOR_PORT`, `ROTOR_QRZ_USER`, `ROTOR_QRZ_PASS` and `ROTOR_QRZ_KEY` take precedence over the file.
+- The test scripts have their port written in the file: `PORT` constant at the top of `calib_read.py`, `goto_test.py`, `m_test.py`, `pas_rotor.py` and `relay_test.py`; directly in the `serial.Serial(...)` call in `test_comm.py` and `b_rotation.py`. Adjust it if needed.
 
-| Commande série (9600 bauds, fin de ligne `\r`) | Effet |
+## Usage
+
+| Serial command (9600 baud, `\r` line ending) | Effect |
 |---|---|
-| `C` | Azimut courant, réponse `+0XXX` |
-| `M xxx` / `W aaa eee` | Aller à l'azimut xxx (élévation ignorée) |
-| `R` / `L` | Rotation continue CW / CCW |
-| `A` / `S` | Arrêt (`S` répond `OK`) |
-| `\R` | Valeur brute de l'ADC (étalonnage) |
-| `\B` | Référence interne 1,1 V (diagnostic du 5 V) |
+| `C` | Current azimuth, reply `+0XXX` |
+| `M xxx` / `W aaa eee` | Go to azimuth xxx (elevation ignored) |
+| `R` / `L` | Continuous rotation CW / CCW |
+| `A` / `S` | Stop (`S` replies `OK`) |
+| `\R` | Raw ADC value (calibration) |
+| `\B` | Internal 1.1 V reference (5 V diagnostic) |
 
-Dans l'interface : **GO** envoie `M`, les boutons **◄ CCW / ■ / CW ►** envoient `L`, `S`, `R`. Une recherche QRZ ou un clic sur la carte remplit le champ de cap **sans lancer la rotation** : il faut appuyer sur GO. La ligne rouge va jusqu'à la cible, le pointillé vert suit le cap réel de l'antenne. F11 : plein écran, Échap pour en sortir. La fermeture de la fenêtre envoie `S`.
+In the GUI: **GO** sends `M`, the **◄ CCW / ■ / CW ►** buttons send `L`, `S`, `R`. A QRZ lookup or a click on the map fills in the bearing field **without starting the rotation**: press GO to turn. The red line goes to the target; the green dotted line follows the antenna's actual heading. F11: full screen, Esc to leave it. Closing the window sends `S`.
 
-## Étalonnage 6 points
+## 6-point calibration
 
-La conversion ADC → degrés est une table de 6 points écrite dans le firmware (`CAL_ADC` / `CAL_DEG`), avec interpolation linéaire entre les points.
+The ADC → degrees conversion is a 6-point table written in the firmware (`CAL_ADC` / `CAL_DEG`), with linear interpolation between points.
 
-1. Placer le rotor **avec les boutons de la face avant** sur chaque repère de l'aiguille : **butée 0°, 90°, 180°, 270°, 360°, puis la graduation « 30 » de la zone de recouvrement (= 390°)**.
-2. À chaque point, l'aiguille arrêtée : `python3 scripts/calib_read.py "180 (aiguille 180)"` (20 lectures de `\R`, moyenne enregistrée dans `scripts/calib_releves.txt`).
-3. Reporter les moyennes arrondies dans le firmware, par exemple :
+1. Move the rotator **with the front panel buttons** to each needle mark: **0° end stop, 90°, 180°, 270°, 360°, then the "30" mark of the overlap zone (= 390°)**.
+2. At each point, with the needle at rest: `python3 scripts/calib_read.py "180 (needle 180)"` (20 readings of `\R`, average saved to `scripts/calib_releves.txt`).
+3. Copy the rounded averages into the firmware, for example:
    ```c
    const int CAL_ADC[] = { 17, 198, 389, 587, 777, 840 };
    const int CAL_DEG[] = {  0,  90, 180, 270, 360, 390 };
    ```
-   Associer la butée à **0°** (et non 1°) : la limite logicielle refuse alors L en butée.
-4. Téléverser, puis contrôler au repos avec `C` à deux ou trois repères.
+   Map the end stop to **0°** (not 1°): the software limit then refuses L at the end stop.
+4. Upload, then check at rest with `C` at two or three marks.
 
-L'étalonnage dépend du 5 V du Nano. **À refaire après tout changement** de Nano, de câble USB, de hub ou de PC, ou si l'écart à l'aiguille dépasse 2°.
+The calibration depends on the Nano's 5 V. **Redo it after any change** of Nano, USB cable, hub or PC, or if the error against the needle exceeds 2°.
 
-## Sécurité
+## Safety
 
-- **Premiers essais par petits pas** (±5 à 10°), l'œil sur l'aiguille, la commande `S` (ou le bouton ■) à portée de main.
-- **Tester les relais rotor débranché** avant tout (`docs/guide_plaque_rotor_g2800.md`, contrôles 1 à 4) : un seul relais à la fois, jamais les deux.
-- **Contrôler le sens** (R = azimut qui monte) avant d'utiliser `M` : avec un sens inversé, la limite logicielle et `M` agissent à l'envers.
-- **Ne jamais relier les fils vert et brun à la masse du Nano** : sur le montage d'essai, cela a fait tourner le rotor sans arrêt.
-- Sécurités du firmware :
-  - interlock : les deux relais ne sont jamais collés ensemble ; **pause de 1 s** relais relâchés à chaque inversion de sens ;
-  - **limite logicielle 0–360°** (le recouvrement 360–450° n'est pas utilisé) ;
-  - **détection de blocage** : relais collé sans variation de 2° en 5 s → arrêt (butée mécanique, givre, boîtier éteint) ;
-  - **timeout de 300 s** sans nouvelle commande de mouvement → arrêt. Une course complète 0 → 360° dure environ 150 à 180 s en commande externe ;
-  - aucun relais collé au démarrage du Nano.
-- Les **butées mécaniques** du rotor restent la dernière protection : la limite logicielle dépend d'une lecture d'azimut correcte. Un boîtier éteint ou un fil d'azimut débranché donne une lecture de 0°.
+- **First tests in small steps** (±5 to 10°), eyes on the needle, with the `S` command (or the ■ button) at hand.
+- **Test the relays with the rotator disconnected** first (`docs/guide_plaque_rotor_g2800.md`, checks 1 to 4): one relay at a time, never both.
+- **Check the direction** (R = azimuth increasing) before using `M`: with the direction reversed, the software limit and `M` work backwards.
+- **Never connect the green and brown wires to the Nano's ground**: on the test setup this made the rotator turn non-stop.
+- Firmware safety features:
+  - interlock: the two relays are never energised together; **1 s pause** with relays released on every direction reversal;
+  - **0–360° software limit** (the 360–450° overlap is not used);
+  - **stall detection**: relay energised without a 2° change in 5 s → stop (mechanical end stop, ice, control box switched off);
+  - **300 s timeout** without a new movement command → stop. A full 0 → 360° travel takes about 150 to 180 s under external control;
+  - no relay energised when the Nano starts.
+- The rotator's **mechanical end stops** remain the last line of protection: the software limit depends on a correct azimuth reading. A switched-off control box or an unplugged azimuth wire reads as 0°.
 
-## Crédits
+## Credits
 
-Fond de carte : *Made with Natural Earth. Free vector and raster map data @ [naturalearthdata.com](https://www.naturalearthdata.com/)* (domaine public). Terres 1:50 M, projection de Miller, générées par `tools/gen_world_map.py`.
+Base map: *Made with Natural Earth. Free vector and raster map data @ [naturalearthdata.com](https://www.naturalearthdata.com/)* (public domain). 1:50 M land, Miller projection, generated by `tools/gen_world_map.py`.
 
-## Licence
+## Contributing
 
-Ce projet est distribué sous **GNU General Public License v3.0** : voir le fichier [`LICENSE`](LICENSE).
+Issues and pull requests are welcome. Commit messages are in English: see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Le firmware est une écriture originale qui implémente le protocole GS-232A. Il ne reprend pas le code du [contrôleur de rotor K3NG](https://github.com/k3ng/k3ng_rotator_controller), lui aussi sous GPL-3.0, dont il garde seulement le nom dans sa bannière.
+## License
+
+This project is distributed under the **GNU General Public License v3.0**: see the [`LICENSE`](LICENSE) file.
+
+The firmware is an original implementation of the GS-232A protocol. It does not reuse code from the [K3NG rotator controller](https://github.com/k3ng/k3ng_rotator_controller), also GPL-3.0, and only keeps its name in the start-up banner.
+
+## Author
+
+Albert, **ON5AM** — [hamanalyst.org](https://hamanalyst.org/)
 
 ---
 73 de ON5AM
