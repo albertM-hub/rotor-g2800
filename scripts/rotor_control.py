@@ -37,9 +37,13 @@ def _conf(section, key, env=None, default=""):
 # No default port: if not configured, no connection (avoids writing to some other device)
 COM_PORT  = _conf("serie", "port", "ROTOR_PORT")
 BAUD      = int(_conf("serie", "baud", default="9600"))
-# Station: defaults to the centre of grid square JO20SP (exact coordinates go in rotor_config.ini)
-QTH_LAT   = float(_conf("station", "lat", default="50.6458"))
-QTH_LON   = float(_conf("station", "lon", default="5.5417"))
+# Station: set in rotor_config.ini; missing or empty → 0.0 / 0.0, with a warning at startup
+QTH_LAT   = float(_conf("station", "lat", default="0.0"))
+QTH_LON   = float(_conf("station", "lon", default="0.0"))
+# 0.0 / 0.0 is taken as "not configured": warn on the console and in the GUI, never block
+STATION_UNSET   = QTH_LAT == 0.0 and QTH_LON == 0.0
+STATION_WARNING = ("Station position not configured: edit rotor_config.ini ([station] lat/lon). "
+                   "Bearings and map are meaningless until then.")
 QRZ_USER  = _conf("qrz", "user", "ROTOR_QRZ_USER")
 QRZ_PASS  = _conf("qrz", "password", "ROTOR_QRZ_PASS")
 QRZ_KEY   = _conf("qrz", "key", "ROTOR_QRZ_KEY")
@@ -455,6 +459,11 @@ class RotorApp(tk.Tk):
         if not HAS_PIL:
             tk.Label(p3, text="pip install Pillow numpy", bg=C_PANEL,
                      fg=C_RED, font=("Consolas",7)).pack()
+        if STATION_UNSET:
+            lbl_qth = tk.Label(p3, text=STATION_WARNING, bg=C_PANEL, fg=C_RED,
+                               font=("Consolas",7), wraplength=160, justify="center")
+            lbl_qth.pack(pady=(0,6))
+            self._wrap_to_panel(lbl_qth, p3)
 
         for c in range(4):
             self.columnconfigure(c, weight=1, uniform="panneaux")
@@ -678,4 +687,6 @@ class RotorApp(tk.Tk):
 if __name__ == "__main__":
     if not HAS_PIL:
         print("ATTENTION : pip install Pillow numpy  (carte simplifiée sans ces libs)")
+    if STATION_UNSET:
+        print("WARNING:", STATION_WARNING, flush=True)
     RotorApp().mainloop()
