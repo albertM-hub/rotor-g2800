@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# Essai de M (aller à un azimut) sur le contrôleur rotor ON5AM
+# Test of M (go to an azimuth) on the ON5AM rotator controller
 #
-# Usage :
-#   goto_test.py 300               M 300, suivi de l'azimut jusqu'à l'arrêt
-#   goto_test.py 200 --stop 3      M 200, puis S au bout de 3 s (S doit annuler M)
+# Usage:
+#   goto_test.py 300               M 300, azimuth followed until it stops
+#   goto_test.py 200 --stop 3      M 200, then S after 3 s (S must cancel M)
 #
-# Fin quand l'azimut n'a pas bougé pendant 4 s (plus que l'attente au repos du firmware),
-# ou au bout de 180 s. Quoi qu'il arrive, S est envoyé à la fin (try/finally).
+# Ends when the azimuth has not moved for 4 s (longer than the firmware's settle wait),
+# or after 180 s. Whatever happens, S is sent at the end (try/finally).
 import sys, time
 import serial
 
@@ -36,7 +36,7 @@ def main():
 
     p = serial.Serial(PORT, 9600, timeout=1)
     try:
-        time.sleep(2.5)  # l'ouverture du port redémarre le Nano (DTR)
+        time.sleep(2.5)  # opening the port resets the Nano (DTR)
         p.reset_input_buffer()
         depart = azimut(p)
         log(f"départ : {depart}°  →  M {cible:03d}")

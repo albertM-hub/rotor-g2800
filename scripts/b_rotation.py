@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-# Lecture de \B pendant une rotation R : usage  b_rotation.py [durée_s]  (défaut 10 s)
+# Read \B during an R rotation: usage  b_rotation.py [duration_s]  (default 10 s)
+# Checks the Nano's 5 V under relay load: Vcc ≈ 1.1 V × 1023 / BG
 import serial, sys, time
 DUREE = float(sys.argv[1]) if len(sys.argv) > 1 else 10.0
 with serial.Serial('/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0', 9600, timeout=1) as p:
-    time.sleep(2.5); p.reset_input_buffer()          # l'ouverture redémarre le Nano (DTR)
+    time.sleep(2.5); p.reset_input_buffer()          # opening the port resets the Nano (DTR)
     def q(cmd):
         p.write(cmd + b"\r"); return p.readline().decode(errors='replace').strip()
     c0 = q(b"C")

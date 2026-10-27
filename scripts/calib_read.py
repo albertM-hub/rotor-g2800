@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-# Relevé d'étalonnage : 20 lectures brutes de A0 (\R) + azimut actuel (C)
-# Usage : calib_read.py [étiquette]   — ajoute la ligne au fichier calib_releves.txt
+# Calibration reading: 20 raw A0 readings (\R) + current azimuth (C)
+# Usage: calib_read.py [label]   — appends the line to calib_releves.txt
 import os, sys, time
 import serial
 
@@ -9,7 +9,7 @@ JOURNAL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "calib_releve
 etiquette = " ".join(sys.argv[1:]) or "-"
 
 with serial.Serial(PORT, 9600, timeout=1) as p:
-    time.sleep(2.5)  # l'ouverture du port redémarre le Nano (DTR)
+    time.sleep(2.5)  # opening the port resets the Nano (DTR)
     p.reset_input_buffer()
     vals = []
     for _ in range(20):

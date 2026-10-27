@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
-"""Génère scripts/world_map.png depuis les terres Natural Earth (domaine public).
+"""Generate scripts/world_map.png from the Natural Earth land polygons (public domain).
 
-Projection de Miller avec les constantes de scripts/rotor_control.py (MAP_*), pour que
-la carte et les tracés de l'interface coïncident exactement. Terres en noir, mer en blanc.
+Miller projection with the constants of scripts/rotor_control.py (MAP_*), so that
+the map and the GUI overlays line up exactly. Land in black, sea in white.
 
-Données : ne_50m_land.geojson — https://www.naturalearthdata.com/downloads/50m-physical-vectors/
+Data: ne_50m_land.geojson — https://www.naturalearthdata.com/downloads/50m-physical-vectors/
 (« Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com »)
 
-Usage : python3 tools/gen_world_map.py ne_50m_land.geojson scripts/world_map.png
+Usage: python3 tools/gen_world_map.py ne_50m_land.geojson scripts/world_map.png
 """
 import json, math, sys
 from PIL import Image, ImageDraw
 
-# Mêmes valeurs que scripts/rotor_control.py
+# Same values as scripts/rotor_control.py
 MAP_W, MAP_H = 720, 348
 MAP_X0, MAP_KX = 349.88, 1.9300
 MAP_Y0, MAP_KY = 219.11, 1.9063
-SUR = 4   # suréchantillonnage, pour des côtes propres après réduction
+SUR = 4   # supersampling, for clean coastlines after downscaling
 
 
 def ll_to_xy(lon, lat):
@@ -32,9 +32,9 @@ def main(src, dst):
         geom = feat["geometry"]
         polys = [geom["coordinates"]] if geom["type"] == "Polygon" else geom["coordinates"]
         for poly in polys:
-            # La carte couvre ≈ 373° de longitude : chaque terre est aussi tracée à ±360°
+            # The map spans ≈ 373° of longitude: each land mass is also drawn at ±360°
             for dlon in (-360, 0, 360):
-                for i, ring in enumerate(poly):          # 0 = contour, suivants = trous
+                for i, ring in enumerate(poly):          # 0 = outer ring, following ones = holes
                     pts = [ll_to_xy(lon + dlon, lat) for lon, lat in ring]
                     if len(pts) >= 3:
                         draw.polygon(pts, fill=0 if i == 0 else 255)

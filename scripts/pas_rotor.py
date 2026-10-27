@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# Petit pas réel : R 4 s → L direct (pause d'inversion 1 s dans le firmware) → L 5 s → S
-# Relevé C et \B en continu ; S immédiat si l'azimut s'écarte de plus de 20° du départ.
-# Journal détaillé : pas_rotor.log
+# Small real step: R 4 s → straight to L (1 s reversal pause in the firmware) → L 5 s → S
+# C and \B logged continuously; immediate S if the azimuth drifts more than 20° from the start.
+# Detailed log: pas_rotor.log
 import serial, time
 
 PORT = "/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0"
 p = serial.Serial(PORT, 9600, timeout=0.5)
-time.sleep(2.5)  # l'ouverture du port redémarre le Nano (DTR)
+time.sleep(2.5)  # opening the port resets the Nano (DTR)
 p.reset_input_buffer()
 log = []
 t0 = time.time()
@@ -55,7 +55,7 @@ try:
     a0 = [az() for _ in range(5)]
     start = round(sum(a0) / 5)
     print("départ C =", a0)
-    # Lecture de départ suspecte (boîtier éteint, fil orange/brun débranché) : aucun mouvement
+    # Suspicious starting reading (control box off, orange/brown wire unplugged): no movement
     if None in a0 or max(a0) - min(a0) > 1 or start < 5:
         raise Abort("lecture de départ incohérente, essai annulé avant tout mouvement")
     watch(1.0, start)

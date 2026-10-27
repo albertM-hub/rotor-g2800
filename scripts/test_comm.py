@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# Test de communication : bannière + 15 lectures « C » (azimut)
+# Communication test: banner + 15 "C" readings (azimuth)
 import serial, time
 with serial.Serial('/dev/serial/by-id/usb-1a86_USB_Serial-if00-port0', 9600, timeout=1) as p:
-    time.sleep(2.5)                      # l'ouverture du port redémarre le Nano (DTR)
+    time.sleep(2.5)                      # opening the port resets the Nano (DTR)
     print("Bannière :", repr(p.read(p.in_waiting or 1).decode(errors='replace')))
     p.reset_input_buffer()
     vals = []
